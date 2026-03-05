@@ -3,7 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production && npm install tsx typescript
+RUN npm install && npm install tsx typescript
 
 COPY . .
 RUN npm run build
