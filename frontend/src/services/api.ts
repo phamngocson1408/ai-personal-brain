@@ -2,7 +2,7 @@ import { Session, Message, StreamChunk, MemoryStats, UserProfile, SemanticSearch
 
 // Khi deploy lên Render: đặt VITE_API_URL=https://your-backend.onrender.com/api
 // Khi dev local: proxy qua vite.config.ts, dùng /api như cũ
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '');
 
 // ─── Sessions ───────────────────────────────────────────────────────────────
 
