@@ -1,0 +1,90 @@
+version: '3.9'
+
+services:
+  # ─── PostgreSQL + pgvector ─────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: personal-brain-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: personal_brain
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend API ───────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: personal-brain-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: personal_brain
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      BRAVE_SEARCH_API_KEY: ${BRAVE_SEARCH_API_KEY:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # ─── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: personal-brain-ui
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+  # ─── Cloudflare Tunnel (truy cập từ xa, miễn phí) ──────────────────────────
+  # Cách dùng: đặt CLOUDFLARE_TUNNEL_TOKEN=<token> trong file .env
+  # Lấy token tại: https://one.dash.cloudflare.com/ → Networks → Tunnels
+  # Hoặc dùng Quick Tunnel (không cần tài khoản, URL thay đổi mỗi lần restart):
+  #   docker compose run --rm cloudflared tunnel --url http://frontend:80
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: personal-brain-tunnel
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    # Nếu có CLOUDFLARE_TUNNEL_TOKEN: dùng tunnel cố định với URL tùy chỉnh
+    # Nếu không có token: dùng quick tunnel (URL tạm thời, thay đổi mỗi lần)
+    command: >
+      sh -c "if [ -n '$$CLOUDFLARE_TUNNEL_TOKEN' ];
+             then cloudflared tunnel --no-autoupdate run --token $$CLOUDFLARE_TUNNEL_TOKEN;
+             else cloudflared tunnel --no-autoupdate --url http://frontend:80;
+             fi"
+    environment:
+      CLOUDFLARE_TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - default
+    profiles:
+      - tunnel
+
+volumes:
+  postgres_data:
+    driver: local
