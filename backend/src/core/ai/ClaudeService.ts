@@ -57,7 +57,6 @@ export class ClaudeService {
         const stream = this.client.messages.stream({
           model: config.anthropic.model,
           max_tokens: config.anthropic.maxTokens,
-          thinking: { type: 'adaptive' },
           system: systemPrompt,
           messages,
           tools: this.toolRegistry.getDefinitions(),
@@ -85,7 +84,7 @@ export class ClaudeService {
           break;
         }
 
-        if (message.stop_reason === 'pause_turn') {
+        if ((message.stop_reason as string) === 'pause_turn') {
           // Server-side tool hit iteration limit; re-send to continue
           messages.push({ role: 'assistant', content: message.content });
           messages.push({ role: 'user', content: [] });

@@ -3,6 +3,7 @@ import { semanticMemoryService } from '../../core/memory/SemanticMemoryService';
 import { episodicMemoryService } from '../../core/memory/EpisodicMemoryService';
 import { conceptualMemoryService } from '../../core/memory/ConceptualMemoryService';
 import { memoryOrchestrator } from '../../core/memory/MemoryOrchestrator';
+import { episodicRepository } from '../../db/repositories/EpisodicRepository';
 
 export async function memoryRoutes(app: FastifyInstance): Promise<void> {
 
@@ -34,7 +35,7 @@ export async function memoryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/memory/episodes', async (request, reply) => {
     const { type, limit } = request.query as { type?: string; limit?: string };
     const episodes = type
-      ? await episodicMemoryService['episodicRepository']?.findByType(
+      ? await episodicRepository.findByType(
           type as 'daily' | 'project' | 'topic',
           parseInt(limit || '10')
         )

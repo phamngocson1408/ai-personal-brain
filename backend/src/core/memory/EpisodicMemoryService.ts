@@ -44,22 +44,6 @@ Return a JSON object with EXACTLY this structure:
 Be factual and specific. Focus on actual content, not meta-observations.`,
         },
       ],
-      output_config: {
-        format: {
-          type: 'json_schema',
-          schema: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              summary: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              key_points: { type: 'array', items: { type: 'string' } },
-            },
-            required: ['title', 'summary', 'tags', 'key_points'],
-            additionalProperties: false,
-          },
-        },
-      },
     });
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';

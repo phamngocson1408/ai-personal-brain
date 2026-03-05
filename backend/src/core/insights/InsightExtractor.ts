@@ -61,33 +61,6 @@ Rules:
 - Max 3 insights per message`,
           },
         ],
-        output_config: {
-          format: {
-            type: 'json_schema',
-            schema: {
-              type: 'object',
-              properties: {
-                insights: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      category: { type: 'string' },
-                      key: { type: 'string' },
-                      value: { type: 'string' },
-                      confidence: { type: 'number' },
-                      evidence: { type: 'string' },
-                    },
-                    required: ['category', 'key', 'value', 'confidence', 'evidence'],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ['insights'],
-              additionalProperties: false,
-            },
-          },
-        },
       });
 
       const text =
