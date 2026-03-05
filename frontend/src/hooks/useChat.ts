@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { ChatMessage, ToolCall, StreamChunk } from '../types';
 import { streamChat } from '../services/api';
-import { v4 as uuidv4 } from 'crypto';
-
 function genId(): string {
   return Math.random().toString(36).slice(2, 11);
 }
