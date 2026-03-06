@@ -28,7 +28,7 @@ export class SemanticMemoryService {
     const results = await embeddingRepository.searchSimilar(
       queryEmbedding,
       topK,
-      0.65
+      0.55
     );
     return results.map((r) => ({
       content: r.content,

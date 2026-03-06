@@ -43,10 +43,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     let fullAssistantResponse = '';
 
     try {
-      // Save user message to memory
-      await memoryOrchestrator.saveUserMessage(sessionId, message);
-
-      // Stream response
+      // Stream response (user message is saved AFTER streaming to avoid duplicate in history)
       for await (const chunk of claudeService.chat(sessionId, message)) {
         if (chunk.type === 'text') {
           fullAssistantResponse += chunk.content;
@@ -60,7 +57,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      // Save complete assistant response to memory
+      // Save user message and complete assistant response to memory
+      await memoryOrchestrator.saveUserMessage(sessionId, message);
       if (fullAssistantResponse.length > 0) {
         await memoryOrchestrator.saveAssistantMessage(
           sessionId,

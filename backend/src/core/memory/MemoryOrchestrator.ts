@@ -81,7 +81,7 @@ export class MemoryOrchestrator {
 
     // Create daily summary if needed (runs once per day)
     const todaysMessages = await rawMemoryService.getTodaysMessages();
-    if (todaysMessages.length >= 5) {
+    if (todaysMessages.length >= 3) {
       await episodicMemoryService.createDailySummary(todaysMessages);
     }
   }
