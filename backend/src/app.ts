@@ -5,6 +5,7 @@ import { config } from './config';
 import { runMigrations, closePool } from './db/connection';
 import { chatRoutes } from './api/routes/chat.routes';
 import { memoryRoutes } from './api/routes/memory.routes';
+import { voiceRoutes } from './api/routes/voice.routes';
 import { errorHandler } from './api/middlewares/error.middleware';
 
 async function buildApp() {
@@ -38,6 +39,7 @@ async function buildApp() {
   // ─── Routes ─────────────────────────────────────────────────────────────────
   await app.register(chatRoutes, { prefix: '/api' });
   await app.register(memoryRoutes, { prefix: '/api' });
+  await app.register(voiceRoutes, { prefix: '/api' });
 
   return app;
 }

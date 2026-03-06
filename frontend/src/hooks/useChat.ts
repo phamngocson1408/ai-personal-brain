@@ -5,7 +5,7 @@ function genId(): string {
   return Math.random().toString(36).slice(2, 11);
 }
 
-export function useChat(sessionId: string | null) {
+export function useChat(sessionId: string | null, onAssistantDone?: (text: string) => void) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<(() => void) | null>(null);
@@ -85,6 +85,9 @@ export function useChat(sessionId: string | null) {
           );
           setIsStreaming(false);
           abortRef.current = null;
+          if (onAssistantDone && fullContent) {
+            onAssistantDone(fullContent);
+          }
         },
         (err) => {
           setMessages((prev) =>

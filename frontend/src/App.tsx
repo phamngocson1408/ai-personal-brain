@@ -4,6 +4,7 @@ import { ChatWindow } from './components/Chat/ChatWindow';
 import { MemoryPanel } from './components/Memory/MemoryPanel';
 import { useChat } from './hooks/useChat';
 import { useMobile } from './hooks/useMobile';
+import { useVoice } from './hooks/useVoice';
 import { Session } from './types';
 import { createSession, listSessions, getSessionMessages } from './services/api';
 
@@ -14,8 +15,16 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useMobile();
 
+  const {
+    isRecording, isSpeaking, voiceEnabled, isSupported: voiceSupported,
+    startRecording, stopRecording, speak, stopSpeaking, toggleVoice,
+  } = useVoice((transcript) => {
+    // When voice transcript is ready, send it as a message
+    sendMessage(transcript);
+  });
+
   const { messages, isStreaming, sendMessage, stopStreaming, loadMessages, clearMessages } =
-    useChat(currentSession?.id ?? null);
+    useChat(currentSession?.id ?? null, speak);
 
   // Load sessions on mount
   useEffect(() => {
@@ -116,6 +125,14 @@ export default function App() {
           hasSession={!!currentSession}
           onMenuClick={() => setSidebarOpen(true)}
           isMobile={isMobile}
+          isRecording={isRecording}
+          isSpeaking={isSpeaking}
+          voiceEnabled={voiceEnabled}
+          voiceSupported={voiceSupported}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          onToggleVoice={toggleVoice}
+          onStopSpeaking={stopSpeaking}
         />
 
         {/* Memory Panel (slide-in) */}

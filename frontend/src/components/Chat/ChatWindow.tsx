@@ -13,6 +13,14 @@ interface Props {
   hasSession: boolean;
   onMenuClick?: () => void;
   isMobile?: boolean;
+  isRecording?: boolean;
+  isSpeaking?: boolean;
+  voiceEnabled?: boolean;
+  voiceSupported?: boolean;
+  onStartRecording?: () => void;
+  onStopRecording?: () => void;
+  onToggleVoice?: () => void;
+  onStopSpeaking?: () => void;
 }
 
 function EmptyState({ isMobile }: { isMobile?: boolean }) {
@@ -80,7 +88,7 @@ function EmptyState({ isMobile }: { isMobile?: boolean }) {
   );
 }
 
-export function ChatWindow({ messages, isStreaming, onSend, onStop, sessionTitle, hasSession, onMenuClick, isMobile }: Props) {
+export function ChatWindow({ messages, isStreaming, onSend, onStop, sessionTitle, hasSession, onMenuClick, isMobile, isRecording, isSpeaking, voiceEnabled, voiceSupported, onStartRecording, onStopRecording, onToggleVoice, onStopSpeaking }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,6 +163,14 @@ export function ChatWindow({ messages, isStreaming, onSend, onStop, sessionTitle
         isStreaming={isStreaming}
         disabled={!hasSession}
         isMobile={isMobile}
+        isRecording={isRecording}
+        isSpeaking={isSpeaking}
+        voiceEnabled={voiceEnabled}
+        voiceSupported={voiceSupported}
+        onStartRecording={onStartRecording}
+        onStopRecording={onStopRecording}
+        onToggleVoice={onToggleVoice}
+        onStopSpeaking={onStopSpeaking}
       />
 
       <style>{`

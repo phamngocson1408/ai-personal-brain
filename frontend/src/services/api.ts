@@ -111,3 +111,15 @@ export async function searchMemory(query: string, k = 5): Promise<SemanticSearch
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// ─── Voice ───────────────────────────────────────────────────────────────────
+
+export async function speakText(text: string, voice = 'nova'): Promise<Blob> {
+  const res = await fetch(`${BASE_URL}/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice }),
+  });
+  if (!res.ok) throw new Error(`TTS error: ${res.status}`);
+  return res.blob();
+}
