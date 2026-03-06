@@ -96,6 +96,32 @@ export class ConceptualRepository {
     );
     return parseInt(rows[0].count);
   }
+
+  /**
+   * Apply time-based confidence decay to traits that haven't been confirmed recently.
+   * Mimics how human memory fades without reinforcement.
+   * - Not confirmed in 30 days → confidence × 0.85
+   * - Not confirmed in 90 days → confidence × 0.70
+   * - Traits below 0.15 → deleted (forgotten)
+   */
+  async applyDecay(): Promise<{ decayed: number; deleted: number }> {
+    const decayResult = await query<{ id: string }>(
+      `UPDATE conceptual_memory
+       SET confidence = ROUND((confidence * CASE
+         WHEN last_updated < NOW() - INTERVAL '90 days' THEN 0.70
+         WHEN last_updated < NOW() - INTERVAL '30 days' THEN 0.85
+         ELSE 1.0
+       END)::numeric, 4)
+       WHERE last_updated < NOW() - INTERVAL '30 days'
+       RETURNING id`
+    );
+
+    const deleteResult = await query<{ id: string }>(
+      `DELETE FROM conceptual_memory WHERE confidence < 0.15 RETURNING id`
+    );
+
+    return { decayed: decayResult.length, deleted: deleteResult.length };
+  }
 }
 
 export const conceptualRepository = new ConceptualRepository();

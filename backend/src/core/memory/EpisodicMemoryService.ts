@@ -23,7 +23,7 @@ export class EpisodicMemoryService {
       .join('\n\n');
 
     const response = await this.claude.messages.create({
-      model: config.anthropic.model,
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       messages: [
         {
@@ -81,7 +81,7 @@ Be factual and specific. Focus on actual content, not meta-observations.`,
       .join('\n\n');
 
     const response = await this.claude.messages.create({
-      model: config.anthropic.model,
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       messages: [
         {

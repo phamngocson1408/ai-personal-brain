@@ -7,6 +7,7 @@ import { chatRoutes } from './api/routes/chat.routes';
 import { memoryRoutes } from './api/routes/memory.routes';
 import { voiceRoutes } from './api/routes/voice.routes';
 import { errorHandler } from './api/middlewares/error.middleware';
+import { reflectionJob } from './core/jobs/ReflectionJob';
 
 async function buildApp() {
   const app = Fastify({
@@ -64,9 +65,13 @@ async function main() {
     process.exit(1);
   }
 
+  // Start autonomous background jobs
+  reflectionJob.start();
+
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     console.log(`\n${signal} received. Shutting down gracefully...`);
+    reflectionJob.stop();
     await app.close();
     await closePool();
     process.exit(0);

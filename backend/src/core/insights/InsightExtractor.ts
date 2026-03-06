@@ -31,7 +31,7 @@ export class InsightExtractor {
 
     try {
       const response = await this.claude.messages.create({
-        model: config.anthropic.model,
+        model: 'claude-haiku-4-5-20251001', // haiku: cheaper, fast enough for classification
         max_tokens: 1024,
         messages: [
           {

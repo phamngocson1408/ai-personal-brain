@@ -3,6 +3,7 @@ import { semanticMemoryService, SemanticSearchResult } from './SemanticMemorySer
 import { episodicMemoryService } from './EpisodicMemoryService';
 import { conceptualMemoryService } from './ConceptualMemoryService';
 import { insightExtractor } from '../insights/InsightExtractor';
+import { importanceScorer } from './ImportanceScorer';
 import { config } from '../../config';
 
 export interface RetrievedContext {
@@ -35,14 +36,16 @@ export class MemoryOrchestrator {
     sessionId: string,
     content: string
   ): Promise<{ messageId: string }> {
-    // 1. Save raw
+    // 1. Save raw (always)
     const message = await rawMemoryService.saveMessage(sessionId, 'user', content);
 
-    // 2. Embed + store vector (awaited so it's available for search immediately)
-    await semanticMemoryService.storeMessage(content, message.id, {
-      role: 'user',
-      session_id: sessionId,
-    });
+    // 2. Embed + store vector ONLY if message is worth remembering
+    if (importanceScorer.isWorthEmbedding(content)) {
+      await semanticMemoryService.storeMessage(content, message.id, {
+        role: 'user',
+        session_id: sessionId,
+      });
+    }
 
     return { messageId: message.id };
   }
@@ -52,18 +55,20 @@ export class MemoryOrchestrator {
     content: string,
     userMessage: string
   ): Promise<void> {
-    // 1. Save raw
+    // 1. Save raw (always)
     const message = await rawMemoryService.saveMessage(
       sessionId,
       'assistant',
       content
     );
 
-    // 2. Embed + store
-    await semanticMemoryService.storeMessage(content, message.id, {
-      role: 'assistant',
-      session_id: sessionId,
-    });
+    // 2. Embed + store ONLY if content is substantive
+    if (importanceScorer.isWorthEmbedding(content, 0.2)) {
+      await semanticMemoryService.storeMessage(content, message.id, {
+        role: 'assistant',
+        session_id: sessionId,
+      });
+    }
 
     // 3 & 4. Run insight extraction and daily summary asynchronously (fire-and-forget)
     this.runBackgroundTasks(sessionId, userMessage, content).catch((err) =>
