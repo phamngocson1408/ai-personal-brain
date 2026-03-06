@@ -79,6 +79,41 @@ export class ImportanceScorer {
   isWorthEmbedding(content: string, threshold = 0.25): boolean {
     return this.score(content) >= threshold;
   }
+
+  /**
+   * Score emotional intensity (0.0–1.0) using heuristic patterns.
+   * High-emotion memories are boosted in retrieval — they're more memorable.
+   */
+  emotionalWeight(content: string): number {
+    const lower = content.toLowerCase();
+    let weight = 0;
+
+    const highEmotionPhrases = [
+      // Vietnamese
+      'tuyệt vời', 'xuất sắc', 'tệ quá', 'khó quá', 'lo lắng', 'vui', 'buồn',
+      'tức', 'thất vọng', 'hào hứng', 'bất ngờ', 'phấn khởi', 'sợ', 'căng thẳng',
+      'không thể tin', 'cuối cùng', 'xong rồi', 'đã làm được',
+      // English
+      'amazing', 'terrible', 'frustrated', 'excited', 'worried', 'anxious',
+      'thrilled', 'disappointed', 'proud', 'finally', 'breakthrough', 'failed',
+      'succeeded', 'gave up', 'cant believe', "can't believe", 'incredible',
+      'love', 'hate', 'awful', 'perfect', 'worst', 'best',
+    ];
+
+    for (const phrase of highEmotionPhrases) {
+      if (lower.includes(phrase)) { weight += 0.2; break; }
+    }
+
+    // Exclamation marks amplify emotion
+    const exclamations = (content.match(/!/g) || []).length;
+    weight += Math.min(exclamations * 0.1, 0.2);
+
+    // ALL CAPS words signal strong emotion
+    const capsWords = (content.match(/\b[A-Z]{3,}\b/g) || []).length;
+    weight += Math.min(capsWords * 0.1, 0.2);
+
+    return Math.min(weight, 1.0);
+  }
 }
 
 export const importanceScorer = new ImportanceScorer();

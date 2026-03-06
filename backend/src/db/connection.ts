@@ -65,12 +65,18 @@ export async function withTransaction<T>(
 }
 
 export async function runMigrations(): Promise<void> {
-  const migrationPath = path.join(__dirname, 'migrations', '001_initial.sql');
-  const sql = fs.readFileSync(migrationPath, 'utf-8');
+  const migrationsDir = path.join(__dirname, 'migrations');
+  const files = fs.readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort(); // run in alphabetical order: 001_, 002_, etc.
+
   const client = await getPool().connect();
   try {
-    await client.query(sql);
-    console.log('✅ Migrations applied successfully');
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+      await client.query(sql);
+      console.log(`✅ Migration applied: ${file}`);
+    }
   } finally {
     client.release();
   }

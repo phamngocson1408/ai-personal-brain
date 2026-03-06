@@ -2,6 +2,7 @@ import { rawMemoryService } from './RawMemoryService';
 import { semanticMemoryService, SemanticSearchResult } from './SemanticMemoryService';
 import { episodicMemoryService } from './EpisodicMemoryService';
 import { conceptualMemoryService } from './ConceptualMemoryService';
+import { knowledgeGraphService } from './KnowledgeGraphService';
 import { insightExtractor } from '../insights/InsightExtractor';
 import { importanceScorer } from './ImportanceScorer';
 import { config } from '../../config';
@@ -10,6 +11,7 @@ export interface RetrievedContext {
   semanticMemories: SemanticSearchResult[];
   episodicSummaries: Array<{ title: string; summary: string; type: string; similarity: number }>;
   conceptualProfile: string;
+  knowledgeGraph: string;
   recentMessages: Array<{ role: string; content: string }>;
 }
 
@@ -81,8 +83,13 @@ export class MemoryOrchestrator {
     userMessage: string,
     assistantResponse: string
   ): Promise<void> {
-    // Extract conceptual insights from the conversation
-    await insightExtractor.extractFromConversation(userMessage, assistantResponse);
+    // Run all background tasks in parallel
+    await Promise.all([
+      // Extract conceptual insights
+      insightExtractor.extractFromConversation(userMessage, assistantResponse),
+      // Extract knowledge graph entities and relations
+      knowledgeGraphService.extractAndStore(userMessage, assistantResponse),
+    ]);
 
     // Create daily summary if needed (runs once per day)
     const todaysMessages = await rawMemoryService.getTodaysMessages();
@@ -98,18 +105,19 @@ export class MemoryOrchestrator {
     query: string
   ): Promise<RetrievedContext> {
     // Run all retrievals in parallel for performance
-    const [semanticMemories, episodicSummaries, conceptualProfile, recentMessages] =
+    const [semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages] =
       await Promise.all([
         semanticMemoryService.search(query, config.memory.semanticTopK),
         episodicMemoryService.searchRelatedEpisodes(query, config.memory.episodicTopK),
         conceptualMemoryService.formatForSystemPrompt(),
+        knowledgeGraphService.getGraphForPrompt(),
         rawMemoryService.getRecentConversationHistory(
           sessionId,
           config.memory.maxContextMessages
         ),
       ]);
 
-    return { semanticMemories, episodicSummaries, conceptualProfile, recentMessages };
+    return { semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages };
   }
 
   // ─── SESSIONS ────────────────────────────────────────────────────────────────

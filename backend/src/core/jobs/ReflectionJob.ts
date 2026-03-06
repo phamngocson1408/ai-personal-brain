@@ -65,10 +65,16 @@ export class ReflectionJob {
         this.applyMemoryDecay(),
       ]);
 
-      // Weekly synthesis every 7 days
-      const dayOfWeek = new Date().getDay();
-      if (dayOfWeek === 0) { // Sunday
+      const now = new Date();
+
+      // Weekly synthesis every Sunday
+      if (now.getDay() === 0) {
         await this.createWeeklySynthesis();
+      }
+
+      // Monthly synthesis on 1st of each month
+      if (now.getDate() === 1) {
+        await this.createMonthlySynthesis();
       }
 
       console.log('[ReflectionJob] Daily reflection complete');
@@ -233,6 +239,86 @@ Return JSON:
       console.log('[ReflectionJob] Weekly synthesis created:', parsed.title);
     } catch (err) {
       console.warn('[ReflectionJob] Weekly synthesis parse failed:', err);
+    }
+  }
+
+  // ─── Monthly Synthesis ────────────────────────────────────────────────────
+
+  private async createMonthlySynthesis(): Promise<void> {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    const monthMessages = await rawMemoryService.getMessagesInDateRange(start, end);
+
+    if (monthMessages.length < 20) return;
+
+    const profile = await conceptualMemoryService.formatForSystemPrompt();
+
+    // Summarize user messages only for brevity
+    const userSample = monthMessages
+      .filter((m) => m.role === 'user')
+      .slice(-50)
+      .map((m) => m.content.slice(0, 150))
+      .join('\n---\n');
+
+    const response = await this.claude.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      messages: [
+        {
+          role: 'user',
+          content: `Create a monthly synthesis for the past 30 days.
+
+CURRENT PROFILE:
+${profile || 'No profile yet'}
+
+THIS MONTH'S MESSAGES (sample):
+${userSample.slice(0, 3000)}
+
+Return JSON:
+{
+  "title": "Month of [date] — [main theme]",
+  "summary": "3-5 paragraph deep synthesis of patterns, growth, major decisions, recurring themes, and key learnings this month",
+  "major_themes": ["theme1", "theme2", "theme3"],
+  "growth_areas": ["area1", "area2"],
+  "unresolved_items": ["item still pending"],
+  "key_decisions": ["decision made this month"]
+}`,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    try {
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) return;
+      const parsed = JSON.parse(match[0]);
+
+      const { embeddingService } = await import('../ai/EmbeddingService');
+      const { episodicRepository } = await import('../../db/repositories/EpisodicRepository');
+
+      const embedding = await embeddingService.embed(
+        `${parsed.title} ${parsed.summary}`
+      );
+
+      await episodicRepository.create(
+        'monthly' as any,
+        parsed.title,
+        parsed.summary,
+        parsed.major_themes || [],
+        embedding,
+        start,
+        end,
+        {
+          growth_areas: parsed.growth_areas,
+          unresolved_items: parsed.unresolved_items,
+          key_decisions: parsed.key_decisions,
+        }
+      );
+
+      console.log('[ReflectionJob] Monthly synthesis created:', parsed.title);
+    } catch (err) {
+      console.warn('[ReflectionJob] Monthly synthesis parse failed:', err);
     }
   }
 }

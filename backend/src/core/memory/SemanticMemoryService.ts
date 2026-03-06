@@ -1,5 +1,6 @@
 import { embeddingRepository, SimilarMemory } from '../../db/repositories/EmbeddingRepository';
 import { embeddingService } from '../ai/EmbeddingService';
+import { importanceScorer } from './ImportanceScorer';
 import { config } from '../../config';
 
 export interface SemanticSearchResult {
@@ -17,7 +18,12 @@ export class SemanticMemoryService {
     metadata: Record<string, unknown> = {}
   ): Promise<void> {
     const embedding = await embeddingService.embed(content);
-    await embeddingRepository.store(content, embedding, messageId, metadata);
+    // Store emotional weight in metadata for boosted retrieval
+    const emotional_weight = importanceScorer.emotionalWeight(content);
+    await embeddingRepository.store(content, embedding, messageId, {
+      ...metadata,
+      emotional_weight,
+    });
   }
 
   async search(
@@ -25,12 +31,26 @@ export class SemanticMemoryService {
     topK: number = config.memory.semanticTopK
   ): Promise<SemanticSearchResult[]> {
     const queryEmbedding = await embeddingService.embed(query);
+    // Fetch more than needed, then re-rank with emotional boost
     const results = await embeddingRepository.searchSimilar(
       queryEmbedding,
-      topK,
+      topK * 2,
       0.55
     );
-    return results.map((r) => ({
+
+    // Apply emotional weight boost: high-emotion memories surface more readily
+    const boosted = results
+      .map((r) => {
+        const emotionalWeight = (r.metadata?.emotional_weight as number) ?? 0;
+        return {
+          ...r,
+          boostedScore: r.similarity * (1 + 0.15 * emotionalWeight),
+        };
+      })
+      .sort((a, b) => b.boostedScore - a.boostedScore)
+      .slice(0, topK);
+
+    return boosted.map((r) => ({
       content: r.content,
       similarity: r.similarity,
       messageId: r.message_id,
