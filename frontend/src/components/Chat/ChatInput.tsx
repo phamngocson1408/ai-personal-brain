@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Send, Square, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { Send, Square, Mic, Volume2, VolumeX } from 'lucide-react';
 
 interface Props {
   onSend: (message: string) => void;
@@ -7,20 +7,18 @@ interface Props {
   isStreaming: boolean;
   disabled?: boolean;
   isMobile?: boolean;
-  isRecording?: boolean;
   isSpeaking?: boolean;
   voiceEnabled?: boolean;
   voiceSupported?: boolean;
-  onStartRecording?: () => void;
-  onStopRecording?: () => void;
   onToggleVoice?: () => void;
   onStopSpeaking?: () => void;
+  onEnterVoiceMode?: () => void;
 }
 
 export function ChatInput({
   onSend, onStop, isStreaming, disabled, isMobile,
-  isRecording, isSpeaking, voiceEnabled, voiceSupported,
-  onStartRecording, onStopRecording, onToggleVoice, onStopSpeaking,
+  isSpeaking, voiceEnabled, voiceSupported,
+  onToggleVoice, onStopSpeaking, onEnterVoiceMode,
 }: Props) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,22 +53,21 @@ export function ChatInput({
       <div style={{
         display: 'flex', alignItems: 'flex-end', gap: 8,
         background: '#1e293b',
-        border: `1px solid ${isRecording ? '#ef4444' : '#334155'}`,
+        border: '1px solid #334155',
         borderRadius: 16,
         padding: isMobile ? '6px 6px 6px 12px' : '8px 8px 8px 16px',
-        transition: 'border-color 0.2s',
       }}>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={isRecording ? 'Listening...' : isMobile ? 'Ask anything...' : 'Ask your brain anything... (Shift+Enter for new line)'}
-          disabled={disabled || isRecording}
+          placeholder={isMobile ? 'Ask anything...' : 'Ask your brain anything... (Shift+Enter for new line)'}
+          disabled={disabled}
           rows={1}
           style={{
             flex: 1, background: 'none', border: 'none', outline: 'none',
-            color: isRecording ? '#94a3b8' : '#e2e8f0',
+            color: '#e2e8f0',
             fontSize: isMobile ? 16 : 14, lineHeight: 1.6,
             resize: 'none', fontFamily: 'inherit',
             maxHeight: 160, overflowY: 'auto',
@@ -79,7 +76,7 @@ export function ChatInput({
         />
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {/* Voice output toggle */}
+          {/* Voice output toggle (TTS for text mode) */}
           {voiceSupported && onToggleVoice && (
             <button
               onClick={isSpeaking ? onStopSpeaking : onToggleVoice}
@@ -94,31 +91,42 @@ export function ChatInput({
                 transition: 'all 0.2s', flexShrink: 0,
               }}
             >
-              {isSpeaking ? <VolumeX size={16} /> : voiceEnabled ? <Volume2 size={16} /> : <Volume2 size={16} />}
+              {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
           )}
 
-          {/* Microphone button */}
-          {voiceSupported && (onStartRecording || onStopRecording) && (
+          {/* Voice conversation mode button */}
+          {voiceSupported && onEnterVoiceMode && (
             <button
-              onClick={isRecording ? onStopRecording : onStartRecording}
+              onClick={onEnterVoiceMode}
               disabled={disabled || isStreaming}
-              title={isRecording ? 'Stop recording' : 'Voice input'}
+              title="Start voice conversation"
               style={{
                 width: btnSize, height: btnSize, borderRadius: '50%',
-                background: isRecording
-                  ? 'radial-gradient(circle, #ef4444, #dc2626)'
-                  : 'transparent',
-                border: `1px solid ${isRecording ? '#ef4444' : '#334155'}`,
+                background: 'transparent',
+                border: '1px solid #334155',
                 cursor: disabled || isStreaming ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: isRecording ? 'white' : '#64748b',
+                color: '#64748b',
                 transition: 'all 0.2s', flexShrink: 0,
-                animation: isRecording ? 'pulse 1s infinite' : 'none',
                 opacity: disabled || isStreaming ? 0.4 : 1,
               }}
+              onMouseEnter={e => {
+                if (!disabled && !isStreaming) {
+                  e.currentTarget.style.background = '#1a2535';
+                  e.currentTarget.style.borderColor = '#6366f1';
+                  (e.currentTarget.querySelector('svg') as SVGElement | null)
+                    ?.style.setProperty('color', '#6366f1');
+                  e.currentTarget.style.color = '#6366f1';
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = '#334155';
+                e.currentTarget.style.color = '#64748b';
+              }}
             >
-              {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+              <Mic size={16} />
             </button>
           )}
 
@@ -131,7 +139,7 @@ export function ChatInput({
                 width: btnSize, height: btnSize, borderRadius: '50%',
                 background: '#ef4444', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', transition: 'transform 0.1s', flexShrink: 0,
+                color: 'white', flexShrink: 0,
               }}
             >
               <Square size={16} fill="white" />
@@ -162,7 +170,7 @@ export function ChatInput({
 
       {!isMobile && (
         <div style={{ fontSize: 11, color: '#475569', textAlign: 'center', marginTop: 8 }}>
-          Enter to send · Shift+Enter for new line
+          Enter to send · Shift+Enter for new line · Mic for voice conversation
           {voiceEnabled && ' · Voice reply on'}
           {isSpeaking && ' · Speaking...'}
         </div>

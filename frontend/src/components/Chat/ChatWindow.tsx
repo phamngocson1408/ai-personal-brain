@@ -12,14 +12,12 @@ interface Props {
   hasSession: boolean;
   onMenuClick?: () => void;
   isMobile?: boolean;
-  isRecording?: boolean;
   isSpeaking?: boolean;
   voiceEnabled?: boolean;
   voiceSupported?: boolean;
-  onStartRecording?: () => void;
-  onStopRecording?: () => void;
   onToggleVoice?: () => void;
   onStopSpeaking?: () => void;
+  onEnterVoiceMode?: () => void;
 }
 
 function EmptyState({ isMobile }: { isMobile?: boolean }) {
@@ -87,7 +85,10 @@ function EmptyState({ isMobile }: { isMobile?: boolean }) {
   );
 }
 
-export function ChatWindow({ messages, isStreaming, onSend, onStop, hasSession, onMenuClick, isMobile, isRecording, isSpeaking, voiceEnabled, voiceSupported, onStartRecording, onStopRecording, onToggleVoice, onStopSpeaking }: Props) {
+export function ChatWindow({
+  messages, isStreaming, onSend, onStop, hasSession, onMenuClick, isMobile,
+  isSpeaking, voiceEnabled, voiceSupported, onToggleVoice, onStopSpeaking, onEnterVoiceMode,
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,7 +107,6 @@ export function ChatWindow({ messages, isStreaming, onSend, onStop, hasSession, 
         display: 'flex', alignItems: 'center', gap: 10,
         background: '#0d1117',
       }}>
-        {/* Hamburger menu on mobile */}
         {isMobile && (
           <button
             onClick={onMenuClick}
@@ -162,14 +162,12 @@ export function ChatWindow({ messages, isStreaming, onSend, onStop, hasSession, 
         isStreaming={isStreaming}
         disabled={!hasSession}
         isMobile={isMobile}
-        isRecording={isRecording}
         isSpeaking={isSpeaking}
         voiceEnabled={voiceEnabled}
         voiceSupported={voiceSupported}
-        onStartRecording={onStartRecording}
-        onStopRecording={onStopRecording}
         onToggleVoice={onToggleVoice}
         onStopSpeaking={onStopSpeaking}
+        onEnterVoiceMode={onEnterVoiceMode}
       />
 
       <style>{`

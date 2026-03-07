@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Layout/Sidebar';
 import { ChatWindow } from './components/Chat/ChatWindow';
 import { MemoryPanel } from './components/Memory/MemoryPanel';
+import { VoiceModeOverlay, VoiceState } from './components/Voice/VoiceModeOverlay';
 import { useChat } from './hooks/useChat';
 import { useMobile } from './hooks/useMobile';
 import { useVoice } from './hooks/useVoice';
@@ -12,12 +13,16 @@ export default function App() {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [lastVoiceTranscript, setLastVoiceTranscript] = useState('');
+  const voiceEnabledBeforeMode = useRef(false);
   const isMobile = useMobile();
 
   const {
     isRecording, isSpeaking, voiceEnabled, isSupported: voiceSupported,
     startRecording, stopRecording, speak, stopSpeaking, toggleVoice,
   } = useVoice((transcript) => {
+    setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   });
 
@@ -31,6 +36,53 @@ export default function App() {
       .catch(console.error);
   }, []);
 
+  // Auto-loop: when AI stops speaking (and not streaming/recording), auto-listen
+  useEffect(() => {
+    if (!isVoiceMode || isSpeaking || isStreaming || isRecording) return;
+    const t = setTimeout(() => startRecording(), 600);
+    return () => clearTimeout(t);
+  }, [isVoiceMode, isSpeaking, isStreaming, isRecording]);
+
+  const enterVoiceMode = useCallback(() => {
+    voiceEnabledBeforeMode.current = voiceEnabled;
+    if (!voiceEnabled) toggleVoice();
+    setIsVoiceMode(true);
+    setLastVoiceTranscript('');
+  }, [voiceEnabled, toggleVoice]);
+
+  const exitVoiceMode = useCallback(() => {
+    setIsVoiceMode(false);
+    stopRecording();
+    stopSpeaking();
+    setLastVoiceTranscript('');
+    // Restore voice output to pre-voice-mode state
+    if (!voiceEnabledBeforeMode.current && voiceEnabled) toggleVoice();
+  }, [stopRecording, stopSpeaking, voiceEnabled, toggleVoice]);
+
+  const handleOrbClick = useCallback(() => {
+    if (isSpeaking) {
+      // Interrupt AI speech, start listening
+      stopSpeaking();
+      setTimeout(() => startRecording(), 300);
+    } else if (!isRecording && !isStreaming) {
+      startRecording();
+    }
+  }, [isSpeaking, isRecording, isStreaming, stopSpeaking, startRecording]);
+
+  // Compute voice state for the overlay
+  const voiceState: VoiceState = isRecording ? 'listening'
+    : isStreaming ? 'thinking'
+    : isSpeaking ? 'speaking'
+    : 'idle';
+
+  // Last assistant message for overlay display (updates in real-time while streaming)
+  const lastAssistantText = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return messages[i].content;
+    }
+    return '';
+  })();
+
   return (
     <div style={{
       display: 'flex',
@@ -38,6 +90,17 @@ export default function App() {
       overflow: 'hidden',
       background: '#0f1117',
     }}>
+      {/* Voice Mode Overlay */}
+      {isVoiceMode && (
+        <VoiceModeOverlay
+          voiceState={voiceState}
+          lastUserText={lastVoiceTranscript}
+          assistantText={lastAssistantText}
+          onExit={exitVoiceMode}
+          onOrbClick={handleOrbClick}
+        />
+      )}
+
       {/* Mobile overlay backdrop */}
       {isMobile && sidebarOpen && (
         <div
@@ -69,14 +132,12 @@ export default function App() {
           hasSession={!!currentSession}
           onMenuClick={() => setSidebarOpen(true)}
           isMobile={isMobile}
-          isRecording={isRecording}
           isSpeaking={isSpeaking}
           voiceEnabled={voiceEnabled}
           voiceSupported={voiceSupported}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
           onToggleVoice={toggleVoice}
           onStopSpeaking={stopSpeaking}
+          onEnterVoiceMode={voiceSupported ? enterVoiceMode : undefined}
         />
 
         {/* Memory Panel (slide-in) */}
