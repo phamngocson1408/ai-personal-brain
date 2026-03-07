@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Layout/Sidebar';
 import { ChatWindow } from './components/Chat/ChatWindow';
 import { MemoryPanel } from './components/Memory/MemoryPanel';
@@ -6,10 +6,9 @@ import { useChat } from './hooks/useChat';
 import { useMobile } from './hooks/useMobile';
 import { useVoice } from './hooks/useVoice';
 import { Session } from './types';
-import { createSession, listSessions, getSessionMessages } from './services/api';
+import { createSession } from './services/api';
 
 export default function App() {
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,68 +18,18 @@ export default function App() {
     isRecording, isSpeaking, voiceEnabled, isSupported: voiceSupported,
     startRecording, stopRecording, speak, stopSpeaking, toggleVoice,
   } = useVoice((transcript) => {
-    // When voice transcript is ready, send it as a message
     sendMessage(transcript);
   });
 
-  const { messages, isStreaming, sendMessage, stopStreaming, loadMessages, clearMessages } =
+  const { messages, isStreaming, sendMessage, stopStreaming } =
     useChat(currentSession?.id ?? null, speak);
 
-  // Load sessions on mount
+  // Create a single session on mount
   useEffect(() => {
-    listSessions()
-      .then(setSessions)
+    createSession()
+      .then(setCurrentSession)
       .catch(console.error);
   }, []);
-
-  const handleNewSession = useCallback(async () => {
-    try {
-      const session = await createSession();
-      setSessions((prev) => [session, ...prev]);
-      setCurrentSession(session);
-      clearMessages();
-      if (isMobile) setSidebarOpen(false);
-    } catch (err) {
-      console.error('Failed to create session:', err);
-    }
-  }, [clearMessages, isMobile]);
-
-  const handleSelectSession = useCallback(
-    async (id: string) => {
-      const session = sessions.find((s) => s.id === id);
-      if (!session) return;
-
-      setCurrentSession(session);
-      clearMessages();
-      if (isMobile) setSidebarOpen(false);
-
-      try {
-        const msgs = await getSessionMessages(id);
-        loadMessages(
-          msgs
-            .filter((m) => m.role !== 'system')
-            .map((m) => ({
-              id: m.id,
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-              created_at: m.created_at,
-            }))
-        );
-      } catch (err) {
-        console.error('Failed to load messages:', err);
-      }
-    },
-    [sessions, clearMessages, loadMessages, isMobile]
-  );
-
-  // Create initial session if none exists
-  useEffect(() => {
-    if (sessions.length === 0) {
-      handleNewSession();
-    } else if (!currentSession && sessions.length > 0) {
-      handleSelectSession(sessions[0].id);
-    }
-  }, [sessions.length]);
 
   return (
     <div style={{
@@ -103,10 +52,6 @@ export default function App() {
 
       {/* Sidebar */}
       <Sidebar
-        sessions={sessions}
-        currentSessionId={currentSession?.id ?? null}
-        onSelectSession={handleSelectSession}
-        onNewSession={handleNewSession}
         onToggleMemoryPanel={() => setShowMemoryPanel((v) => !v)}
         showMemoryPanel={showMemoryPanel}
         isMobile={isMobile}
@@ -121,7 +66,6 @@ export default function App() {
           isStreaming={isStreaming}
           onSend={sendMessage}
           onStop={stopStreaming}
-          sessionTitle={currentSession?.title ?? null}
           hasSession={!!currentSession}
           onMenuClick={() => setSidebarOpen(true)}
           isMobile={isMobile}

@@ -9,7 +9,6 @@ interface Props {
   isStreaming: boolean;
   onSend: (message: string) => void;
   onStop: () => void;
-  sessionTitle: string | null;
   hasSession: boolean;
   onMenuClick?: () => void;
   isMobile?: boolean;
@@ -88,7 +87,7 @@ function EmptyState({ isMobile }: { isMobile?: boolean }) {
   );
 }
 
-export function ChatWindow({ messages, isStreaming, onSend, onStop, sessionTitle, hasSession, onMenuClick, isMobile, isRecording, isSpeaking, voiceEnabled, voiceSupported, onStartRecording, onStopRecording, onToggleVoice, onStopSpeaking }: Props) {
+export function ChatWindow({ messages, isStreaming, onSend, onStop, hasSession, onMenuClick, isMobile, isRecording, isSpeaking, voiceEnabled, voiceSupported, onStartRecording, onStopRecording, onToggleVoice, onStopSpeaking }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -126,7 +125,7 @@ export function ChatWindow({ messages, isStreaming, onSend, onStop, sessionTitle
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           flex: 1,
         }}>
-          {sessionTitle || 'New Conversation'}
+          Personal Brain
         </span>
         {isStreaming && (
           <span style={{

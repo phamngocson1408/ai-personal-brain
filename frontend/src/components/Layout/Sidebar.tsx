@@ -1,13 +1,7 @@
 import React from 'react';
-import { Session } from '../../types';
-import { Plus, MessageSquare, Brain, Clock, X } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Brain, X } from 'lucide-react';
 
 interface Props {
-  sessions: Session[];
-  currentSessionId: string | null;
-  onSelectSession: (id: string) => void;
-  onNewSession: () => void;
   onToggleMemoryPanel: () => void;
   showMemoryPanel: boolean;
   isMobile?: boolean;
@@ -16,8 +10,7 @@ interface Props {
 }
 
 export function Sidebar({
-  sessions, currentSessionId, onSelectSession,
-  onNewSession, onToggleMemoryPanel, showMemoryPanel,
+  onToggleMemoryPanel, showMemoryPanel,
   isMobile = false, isOpen = true, onClose,
 }: Props) {
   if (!isOpen) return null;
@@ -31,7 +24,6 @@ export function Sidebar({
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      // On mobile: fixed overlay drawer
       ...(isMobile ? {
         position: 'fixed',
         top: 0,
@@ -48,7 +40,6 @@ export function Sidebar({
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          marginBottom: 12,
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8,
@@ -61,7 +52,6 @@ export function Sidebar({
             <div style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}>Personal Brain</div>
             <div style={{ fontSize: 10, color: '#475569' }}>Your digital memory</div>
           </div>
-          {/* Close button on mobile */}
           {isMobile && (
             <button
               onClick={onClose}
@@ -75,20 +65,6 @@ export function Sidebar({
             </button>
           )}
         </div>
-
-        <button
-          onClick={onNewSession}
-          style={{
-            width: '100%', padding: '8px 12px',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            border: 'none', borderRadius: 8, cursor: 'pointer',
-            color: 'white', fontSize: 13, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}
-        >
-          <Plus size={14} />
-          New Conversation
-        </button>
       </div>
 
       {/* Memory Panel Toggle */}
@@ -110,61 +86,7 @@ export function Sidebar({
         Memory & Profile
       </button>
 
-      {/* Sessions list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 8px' }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, color: '#475569',
-          textTransform: 'uppercase', letterSpacing: '0.08em',
-          padding: '8px 8px 4px',
-        }}>
-          Conversations
-        </div>
-
-        {sessions.length === 0 ? (
-          <div style={{ padding: '16px 8px', textAlign: 'center', color: '#475569', fontSize: 12 }}>
-            <MessageSquare size={20} style={{ marginBottom: 6, opacity: 0.4 }} />
-            <p style={{ margin: 0 }}>No conversations yet</p>
-          </div>
-        ) : (
-          sessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => onSelectSession(session.id)}
-              style={{
-                width: '100%', textAlign: 'left',
-                padding: '10px 10px',
-                background: currentSessionId === session.id ? '#1e293b' : 'none',
-                border: `1px solid ${currentSessionId === session.id ? '#334155' : 'transparent'}`,
-                borderRadius: 8, cursor: 'pointer',
-                marginBottom: 2, transition: 'all 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                if (currentSessionId !== session.id)
-                  e.currentTarget.style.background = '#1a2332';
-              }}
-              onMouseLeave={(e) => {
-                if (currentSessionId !== session.id)
-                  e.currentTarget.style.background = 'none';
-              }}
-            >
-              <div style={{
-                fontSize: 13, color: '#e2e8f0', fontWeight: 500,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                marginBottom: 3,
-              }}>
-                {session.title || 'New Conversation'}
-              </div>
-              <div style={{
-                fontSize: 10, color: '#475569',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                <Clock size={9} />
-                {formatDistanceToNow(new Date(session.updated_at), { addSuffix: true })}
-              </div>
-            </button>
-          ))
-        )}
-      </div>
+      <div style={{ flex: 1 }} />
 
       {/* Footer */}
       <div style={{
