@@ -1,6 +1,7 @@
 import { embeddingRepository, SimilarMemory } from '../../db/repositories/EmbeddingRepository';
 import { embeddingService } from '../ai/EmbeddingService';
 import { importanceScorer } from './ImportanceScorer';
+import { queryExpander } from './QueryExpander';
 import { config } from '../../config';
 
 export interface SemanticSearchResult {
@@ -89,6 +90,43 @@ export class SemanticMemoryService {
         chunk_index: i,
       });
     }
+  }
+
+  /**
+   * Tìm kiếm với query expansion: sinh các biến thể ngữ nghĩa của query,
+   * search song song với tất cả variants, merge và deduplicate kết quả.
+   *
+   * Giải quyết vấn đề semantic gap: "thanh lý" → tìm thấy "máy lọc nước cần bán"
+   */
+  async searchWithExpansion(
+    query: string,
+    topK: number = config.memory.semanticTopK
+  ): Promise<SemanticSearchResult[]> {
+    // Sinh query variants song song với việc chuẩn bị (không block)
+    const variants = await queryExpander.expand(query);
+
+    // Search tất cả variants song song
+    const allResults = await Promise.all(
+      variants.map((v) => this.search(v, topK))
+    );
+
+    // Merge và deduplicate: giữ kết quả có similarity cao nhất theo messageId
+    const seen = new Map<string, SemanticSearchResult>();
+    for (const results of allResults) {
+      for (const result of results) {
+        // Dùng messageId làm key; nếu không có thì dùng content prefix
+        const key = result.messageId ?? result.content.slice(0, 80);
+        const existing = seen.get(key);
+        if (!existing || result.similarity > existing.similarity) {
+          seen.set(key, result);
+        }
+      }
+    }
+
+    // Sort theo similarity giảm dần, lấy top-K
+    return Array.from(seen.values())
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, topK);
   }
 
   async getTotalMemoryCount(): Promise<number> {

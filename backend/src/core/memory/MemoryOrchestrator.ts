@@ -107,7 +107,7 @@ export class MemoryOrchestrator {
     // Run all retrievals in parallel for performance
     const [semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages] =
       await Promise.all([
-        semanticMemoryService.search(query, config.memory.semanticTopK),
+        semanticMemoryService.searchWithExpansion(query, config.memory.semanticTopK),
         episodicMemoryService.searchRelatedEpisodes(query, config.memory.episodicTopK),
         conceptualMemoryService.formatForSystemPrompt(),
         knowledgeGraphService.getGraphForPrompt(),
