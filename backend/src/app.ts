@@ -6,6 +6,7 @@ import { runMigrations, closePool } from './db/connection';
 import { chatRoutes } from './api/routes/chat.routes';
 import { memoryRoutes } from './api/routes/memory.routes';
 import { voiceRoutes } from './api/routes/voice.routes';
+import { instructionsRoutes } from './api/routes/instructions.routes';
 import { errorHandler } from './api/middlewares/error.middleware';
 import { reflectionJob } from './core/jobs/ReflectionJob';
 
@@ -41,6 +42,7 @@ async function buildApp() {
   await app.register(chatRoutes, { prefix: '/api' });
   await app.register(memoryRoutes, { prefix: '/api' });
   await app.register(voiceRoutes, { prefix: '/api' });
+  await app.register(instructionsRoutes, { prefix: '/api' });
 
   return app;
 }

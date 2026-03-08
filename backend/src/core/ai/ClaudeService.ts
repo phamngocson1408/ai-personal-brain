@@ -5,6 +5,7 @@ import { urlFetchTool } from '../tools/UrlFetchTool';
 import { documentIngestionTool } from '../tools/DocumentIngestionTool';
 import { promptBuilder } from './PromptBuilder';
 import { memoryOrchestrator, RetrievedContext } from '../memory/MemoryOrchestrator';
+import { userInstructionsService } from '../memory/UserInstructionsService';
 import { config } from '../../config';
 
 export interface StreamChunk {
@@ -36,8 +37,11 @@ export class ClaudeService {
     userMessage: string
   ): AsyncGenerator<StreamChunk> {
     try {
-      // 1. Retrieve context from memory orchestrator
-      const context = await memoryOrchestrator.retrieveContext(sessionId, userMessage);
+      // 1. Retrieve context from memory orchestrator + tool preferences
+      const [context, enabledTools] = await Promise.all([
+        memoryOrchestrator.retrieveContext(sessionId, userMessage),
+        userInstructionsService.getEnabledTools(),
+      ]);
       const systemPrompt = promptBuilder.buildSystemPrompt(context);
 
       // 2. Build conversation history
@@ -50,6 +54,12 @@ export class ClaudeService {
         { role: 'user', content: userMessage },
       ];
 
+      // Filter tool definitions to only enabled tools
+      const enabledSet = new Set(enabledTools);
+      const activeToolDefs = this.toolRegistry
+        .getDefinitions()
+        .filter((t) => enabledSet.has(t.name));
+
       // 3. Agentic tool loop with streaming
       let fullResponse = '';
 
@@ -59,7 +69,7 @@ export class ClaudeService {
           max_tokens: config.anthropic.maxTokens,
           system: systemPrompt,
           messages,
-          tools: this.toolRegistry.getDefinitions(),
+          tools: activeToolDefs,
           tool_choice: { type: 'auto' },
         });
 

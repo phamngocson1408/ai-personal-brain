@@ -65,6 +65,15 @@ Semantically similar past messages (⚡ = high emotional weight, more memorable)
 ${semantic}`);
     }
 
+    // User behavior instructions — injected right before tool guidelines
+    if (context.userInstructions && context.userInstructions.length > 0) {
+      sections.push(`## USER BEHAVIOR INSTRUCTIONS
+The user has configured these persistent preferences. Follow them STRICTLY in every response:
+${context.userInstructions}
+
+These take priority over default behavior. If an instruction conflicts with a core principle (e.g., factual accuracy), prioritize accuracy and briefly acknowledge the conflict.`);
+    }
+
     sections.push(`## TOOL USAGE GUIDELINES
 When using tools, follow this flow:
 1. Decide if a tool is needed (state your reasoning)

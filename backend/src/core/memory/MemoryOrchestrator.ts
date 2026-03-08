@@ -3,6 +3,7 @@ import { semanticMemoryService, SemanticSearchResult } from './SemanticMemorySer
 import { episodicMemoryService } from './EpisodicMemoryService';
 import { conceptualMemoryService } from './ConceptualMemoryService';
 import { knowledgeGraphService } from './KnowledgeGraphService';
+import { userInstructionsService } from './UserInstructionsService';
 import { insightExtractor } from '../insights/InsightExtractor';
 import { importanceScorer } from './ImportanceScorer';
 import { config } from '../../config';
@@ -13,6 +14,7 @@ export interface RetrievedContext {
   conceptualProfile: string;
   knowledgeGraph: string;
   recentMessages: Array<{ role: string; content: string }>;
+  userInstructions: string;
 }
 
 /**
@@ -89,6 +91,8 @@ export class MemoryOrchestrator {
       insightExtractor.extractFromConversation(userMessage, assistantResponse),
       // Extract knowledge graph entities and relations
       knowledgeGraphService.extractAndStore(userMessage, assistantResponse),
+      // Detect explicit behavior change instructions
+      insightExtractor.detectBehaviorInstructions(userMessage),
     ]);
 
     // Create daily summary if needed (runs once per day)
@@ -105,7 +109,7 @@ export class MemoryOrchestrator {
     query: string
   ): Promise<RetrievedContext> {
     // Run all retrievals in parallel for performance
-    const [semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages] =
+    const [semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages, userInstructions] =
       await Promise.all([
         semanticMemoryService.searchWithExpansion(query, config.memory.semanticTopK),
         episodicMemoryService.searchRelatedEpisodes(query, config.memory.episodicTopK),
@@ -115,9 +119,10 @@ export class MemoryOrchestrator {
           sessionId,
           config.memory.maxContextMessages
         ),
+        userInstructionsService.formatForSystemPrompt(),
       ]);
 
-    return { semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages };
+    return { semanticMemories, episodicSummaries, conceptualProfile, knowledgeGraph, recentMessages, userInstructions };
   }
 
   // ─── SESSIONS ────────────────────────────────────────────────────────────────
