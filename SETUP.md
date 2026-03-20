@@ -1,5 +1,9 @@
 # AI Personal Brain — Setup & Deployment Guide
 
+## Publish lên Internet bằng Cloudflared
+
+Xem hướng dẫn nhanh tại file `START_INTERNET.md`.
+
 ## Architecture Overview
 
 ```
